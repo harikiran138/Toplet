@@ -1,0 +1,62 @@
+# Toplet's checks: fast, Command-Line-Tools-only test suites that run on every pull request.
+# The Xcode app build lives in ci.yml.
+name: Toplet tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Read-only token: these jobs never write to the repository.
+permissions:
+  contents: read
+
+concurrency:
+  group: toplet-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Pure rules, agents core and hooks
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      # Pinned to a full commit SHA (actions/checkout v4.2.2) so a moved tag cannot change what runs.
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+
+      - name: Pure rule suites (usage wording, games, clock, ship)
+        run: tests/pure/run.sh
+
+      - name: Agents core
+        run: bash AtollAgents/Tests/run_core.sh
+
+      - name: Agents hook installer
+        run: bash AtollAgents/Tests/run_hooks.sh
+
+      - name: Agents usage dashboard
+        run: bash AtollAgents/Tests/run_dashboard.sh
+
+      - name: Notch engine (idle animations, event arbiter, notification queue)
+        run: |
+          bash AtollNotch/Tests/run_idle.sh
+          bash AtollNotch/Tests/run_arbiter.sh
+          bash AtollNotch/Tests/run_queue.sh
+
+      - name: Privacy and configuration checks
+        run: python3 -m unittest discover -s tests -p 'test_*.py' -v
+
+      - name: No user-visible "Atoll" left behind
+        run: |
+          python3 local/tools/rebrand.py . --dry-run | tee rebrand.txt
+          grep -q '^0 files$' rebrand.txt || { echo "Run local/tools/rebrand.py: user-visible strings still say Atoll."; exit 1; }
+
+      - name: App copies of stand-alone modules are in sync
+        run: |
+          tmp="$(mktemp -d)"
+          cp -R . "$tmp/repo"
+          (cd "$tmp/repo" && local/sync-notch.sh >/dev/null)
+          diff -r Toplet/AtollNotchIdle "$tmp/repo/Toplet/AtollNotchIdle" \
+            || { echo "Toplet/AtollNotchIdle is stale: run local/sync-notch.sh"; exit 1; }

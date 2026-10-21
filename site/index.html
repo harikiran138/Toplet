@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Toplet — a little ship for your Mac's notch</title>
+<meta name="description" content="Toplet is a free, open-source living notch companion for macOS: music, timers, alarms, AI usage limits, games and a small ship that reacts to what your Mac is doing. Local-first, no accounts.">
+<meta property="og:title" content="Toplet — a little ship for your Mac's notch">
+<meta property="og:description" content="A free, open-source living notch companion for macOS.">
+<meta property="og:image" content="social-preview.png">
+<link rel="icon" href="icon-256.png">
+<style>
+  :root {
+    --bg: #f5f8fc; --surface: #ffffff; --text: #0b1b2b; --muted: #4a5b6e;
+    --accent: #1f6fa8; --accent-strong: #145a8c; --line: #dbe4ee; --wave: #3a9bdc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #03111c; --surface: #072235; --text: #e8f6f5; --muted: #9fb3c5;
+            --accent: #3a9bdc; --accent-strong: #63b3ea; --line: #0b3550; --wave: #3a9bdc; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 17px/1.55 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+         background: var(--bg); color: var(--text); }
+  a { color: var(--accent-strong); }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 20px; }
+  header.hero { text-align: center; padding: 64px 0 40px; }
+  .hero img.icon { width: 112px; height: 112px; }
+  h1 { font-size: clamp(2.2rem, 5vw, 3.4rem); line-height: 1.1; margin: 16px 0 8px; letter-spacing: -0.02em; }
+  .tagline { font-size: 1.25rem; color: var(--muted); margin: 0 auto 28px; max-width: 34em; }
+  .actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .btn { display: inline-block; padding: 12px 22px; border-radius: 999px; text-decoration: none; font-weight: 600; }
+  .btn.primary { background: var(--accent); color: #fff; }
+  .btn.secondary { border: 1px solid var(--line); color: var(--text); background: var(--surface); }
+  .btn:focus-visible { outline: 3px solid var(--accent-strong); outline-offset: 3px; }
+  .note { font-size: 0.9rem; color: var(--muted); margin-top: 14px; }
+  .stage { margin: 36px auto 0; max-width: 560px; background: #000; border-radius: 28px; padding: 18px 22px 8px; }
+  .stage svg { width: 100%; height: auto; display: block; }
+  .stage figcaption { color: #9fb3c5; font-size: 0.85rem; padding: 8px 0 6px; text-align: center; }
+  @media (prefers-reduced-motion: no-preference) {
+    .bob { animation: bob 3.6s ease-in-out infinite; transform-origin: 52px 46px; }
+    .wave { animation: drift 7s linear infinite; }
+    @keyframes bob { 0%,100% { transform: translateY(0) rotate(-1.5deg); } 50% { transform: translateY(-1.2px) rotate(1.5deg); } }
+    @keyframes drift { from { transform: translateX(0); } to { transform: translateX(-50px); } }
+  }
+  section { padding: 40px 0; border-top: 1px solid var(--line); }
+  h2 { font-size: 1.6rem; margin: 0 0 18px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
+  .card h3 { margin: 0 0 6px; font-size: 1.05rem; }
+  .card p { margin: 0; color: var(--muted); font-size: 0.97rem; }
+  ul.plain { padding-left: 1.1em; } ul.plain li { margin: 4px 0; }
+  code { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; font-size: 0.92em; }
+  pre { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; overflow-x: auto; }
+  footer { padding: 32px 0 48px; color: var(--muted); font-size: 0.92rem; text-align: center; border-top: 1px solid var(--line); }
+</style>
+</head>
+<body>
+<main>
+  <header class="hero wrap">
+    <img class="icon" src="icon-256.png" alt="Toplet icon: a glass ship sailing on a wave">
+    <h1>Toplet</h1>
+    <p class="tagline">A little ship for your Mac. An open-source living notch companion: useful daily tools, a small ship with personality, and nothing leaves your Mac unless you ask.</p>
+    <div class="actions">
+      <a class="btn primary" href="https://github.com/harikiran138/Toplet#install">Get Toplet</a>
+      <a class="btn secondary" href="https://github.com/harikiran138/Toplet">View on GitHub</a>
+    </div>
+    <p class="note">Free and open source under GPL-3.0 · macOS 14.6 or later · Signed downloads are coming; today you build it in a few minutes.</p>
+    <figure class="stage" aria-label="Illustration of Toplet's ship companion beside the notch">
+      <svg viewBox="40 -4 250 58" role="img" aria-hidden="true">
+        <rect x="50" y="-4" width="160" height="34" rx="12" fill="#111"/>
+        <g transform="translate(214 -2) scale(0.74)">
+          <g class="wave"><path d="M0 53 Q12.5 49 25 53 T50 53 T75 53 T100 53 T125 53 T150 53 V64 H0Z" fill="#3a9bdc" opacity=".45"/></g>
+          <g class="bob">
+            <line x1="48" y1="33" x2="48" y2="5" stroke="#173d8c" stroke-width="1.6"/>
+            <path d="M49.5 7 Q74 18 49.5 31Z" fill="#f4f6ff"/>
+            <path d="M46.5 12 Q30 24 46.5 31Z" fill="#c7d6f2"/>
+            <path d="M48 5 L57 7 L48 9.5Z" fill="#5cdbf2"/>
+            <path d="M10 33 L78 33 C84 33 88 31 90 28 C93 33 88 48 74 50 L28 50 C18 50 11 43 10 33Z" fill="#296edb"/>
+            <circle cx="90" cy="26.5" r="2.5" fill="#5cdbf2"/>
+            <circle cx="66" cy="41.5" r="4.2" fill="#fff" stroke="#173d8c"/>
+            <circle cx="66" cy="41.5" r="1.4" fill="#0d1a38"/>
+          </g>
+          <g class="wave"><path d="M0 55 Q12.5 51 25 55 T50 55 T75 55 T100 55 T125 55 T150 55 V64 H0Z" fill="#3a9bdc" opacity=".9"/></g>
+        </g>
+      </svg>
+      <figcaption>Illustration of the ship companion. It floats beside the closed notch and reacts when your Mac charges, downloads, finishes a timer, goes offline or turns in for the night.</figcaption>
+    </figure>
+  </header>
+
+  <section class="wrap" aria-labelledby="features">
+    <h2 id="features">What it does today</h2>
+    <div class="grid">
+      <div class="card"><h3>Music in the notch</h3><p>Play, pause and skip for Apple Music, Spotify and other players, with optional lyrics that stay under the notch.</p></div>
+      <div class="card"><h3>AI usage limits</h3><p>Your Claude, Codex and Cursor plan limits in plain words: “Session limit · Resets in 1 hr 45 min · 47%”. Pin one under the notch.</p></div>
+      <div class="card"><h3>Timers, alarms and world clocks</h3><p>12- or 24-hour time, alarms that open the notch when they ring, and the time in the cities you care about.</p></div>
+      <div class="card"><h3>A quick game</h3><p>Pairs, Tic-Tac-Toe and Lights Out, right in the notch, for a short break.</p></div>
+      <div class="card"><h3>Useful system glances</h3><p>Battery, Bluetooth devices, downloads, Focus, screen recording, a file shelf with AirDrop, clipboard history and more.</p></div>
+      <div class="card"><h3>Coding agents</h3><p>Follow Claude Code and Codex sessions and answer their permission requests from the notch.</p></div>
+    </div>
+    <p class="note">The full, honest feature list (including what is still partial) is in <a href="https://github.com/harikiran138/Toplet/blob/main/docs/FEATURES.md">FEATURES.md</a>.</p>
+  </section>
+
+  <section class="wrap" aria-labelledby="privacy">
+    <h2 id="privacy">Private by design</h2>
+    <ul class="plain">
+      <li>No account, no subscription, no ads, no analytics.</li>
+      <li>Everything runs on your Mac. Features that use the internet (weather, lyrics, AI plan limits) say so and can be turned off.</li>
+      <li>Toplet reads other apps' sign-ins only to show your limits, and never changes them.</li>
+    </ul>
+  </section>
+
+  <section class="wrap" aria-labelledby="install">
+    <h2 id="install">Install</h2>
+    <p>Works on macOS 14.6 or later. Until signed releases are available, build it from source with the Xcode Command Line Tools:</p>
+<pre><code>git clone https://github.com/harikiran138/Toplet.git
+cd Toplet
+./local/build.sh release
+./local/install.sh
+open ~/Applications/Toplet.app</code></pre>
+    <p class="note">Releases and changes: <a href="https://github.com/harikiran138/Toplet/releases">GitHub Releases</a> · <a href="https://github.com/harikiran138/Toplet/blob/main/CHANGELOG.md">Changelog</a></p>
+  </section>
+
+  <section class="wrap" aria-labelledby="contribute">
+    <h2 id="contribute">Developers, come aboard</h2>
+    <p>Toplet is built in Swift, SwiftUI and AppKit, and every kind of help is welcome: code, design, ship characters, accessibility, translations, testing and docs. Start with the <a href="https://github.com/harikiran138/Toplet/blob/main/docs/CONTRIBUTOR-ONBOARDING.md">first-contribution guide</a> and the <a href="https://github.com/harikiran138/Toplet/blob/main/docs/ROADMAP.md">roadmap</a>.</p>
+  </section>
+</main>
+<footer class="wrap">
+  Toplet is a community fork of <a href="https://github.com/Ebullioscopic/Atoll">Atoll</a>, which builds on <a href="https://github.com/TheBoredTeam/boring.notch">boring.notch</a>. GPL-3.0.
+  Not affiliated with Apple. <br>One little ship. An ocean of possibilities.
+</footer>
+</body>
+</html>

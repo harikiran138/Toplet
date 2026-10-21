@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>Toplet uses Apple Music to fetch animated artwork for the lock screen wallpaper.</string>
+	<key>NSAudioCaptureUsageDescription</key>
+	<string>Toplet needs audio capture permission to show the real-time music waveform and to set the volume of individual apps. Audio is only processed live and is never recorded or saved.</string>
+	<key>NSScreenCaptureUsageDescription</key>
+	<string>Toplet needs screen recording permission to capture screenshots for the AI assistant feature.</string>
+	<key>SUEnableDownloaderService</key>
+	<true/>
+	<key>SUEnableInstallerLauncherService</key>
+	<true/>
+	<key>UTImportedTypeDeclarations</key>
+	<array>
+		<dict/>
+	</array>
+</dict>
+</plist>

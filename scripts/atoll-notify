@@ -1,0 +1,221 @@
+#!/bin/sh
+# atoll-notify: show a notification in the Atoll notch from a script, git hook, cron job or CI step.
+#
+# Atoll (DynamicIsland), GPL-3.0-or-later. Copyright (C) 2024-2026 Atoll Contributors.
+#
+# Talks to Atoll's private unix socket (default ~/.atoll/run/notify.sock, mode 0600, owner-only). POSIX sh, macOS
+# built-ins only (/usr/bin/nc, printf, head, tr). Every argument is treated as DATA: it is JSON-escaped and sent, never
+# passed to eval or to a shell. There is no network access.
+#
+# Exit status: 0 sent, or Atoll is not running (a one-line hint goes to stderr, so pipelines never break);
+#              1 Atoll rejected the notification; 2 usage error; 3 Atoll not reachable and --strict was given.
+
+PATH=/usr/bin:/bin:/usr/sbin:/sbin
+LC_ALL=C
+export PATH LC_ALL
+
+PROG=atoll-notify
+MAXLEN=8192
+
+usage() {
+    cat <<'EOF'
+usage: atoll-notify -t TITLE [options]
+
+  -t, --title TEXT        title (required)
+  -b, --body TEXT         body ("-" reads the body from standard input)
+  -s, --subtitle TEXT     subtitle
+  -a, --app NAME          app name shown on the notification ("via CLI" is always appended)
+  -i, --bundle-id ID      bundle identifier whose icon to show, e.g. com.apple.Terminal
+      --symbol NAME       SF Symbol name for the icon, e.g. hammer.fill
+  -u, --url URL           open this URL when the notification is clicked (https, http, mailto, file, custom schemes)
+  -o, --open-app ID       activate this app (bundle identifier) when clicked
+      --tab NAME          open this notch tab when clicked
+  -p, --priority LEVEL    low | normal | high | critical (default normal)
+      --ttl SECONDS       how long to show it (1 to 300; default is Atoll's setting)
+      --dedupe KEY        same key replaces the earlier notification instead of stacking
+      --thread ID         grouping hint
+      --sensitive         always hide the body and subtitle (privacy)
+      --socket PATH       socket to use (default $ATOLL_NOTIFY_SOCKET, else ~/.atoll/run/notify.sock)
+      --strict            exit 3 when Atoll is not running instead of 0
+  -h, --help              this text
+      --version
+
+Only one of --url, --open-app and --tab may be given.
+Atoll shows what you send; it cannot read other apps' notifications.
+EOF
+}
+
+die_usage() {
+    printf '%s: %s\n' "$PROG" "$1" >&2
+    printf "Try '%s --help'.\n" "$PROG" >&2
+    exit 2
+}
+
+NL='
+'
+TAB=$(printf '\t')
+CR=$(printf '\r')
+# Control characters that must be escaped in JSON (0x01-0x1f, 0x7f). NUL cannot occur in an argument.
+CTRL=$(printf '\001\002\003\004\005\006\007\010\011\012\013\014\015\016\017\020\021\022\023\024\025\026\027\030\031\032\033\034\035\036\037\177')
+
+# json_str VALUE -> REPLY holds VALUE as a quoted JSON string.
+# Runs of ordinary characters are copied in one step (linear time); only quote, backslash and control characters take the
+# slow path, and at most 4096 of those are processed per value. Bytes >= 0x80 pass through untouched (UTF-8 stays UTF-8;
+# invalid bytes are repaired by Atoll).
+json_str() {
+    _s=$1
+    if [ "${#_s}" -gt "$MAXLEN" ]; then _s=$(printf "%.${MAXLEN}s" "$_s"); fi
+    _o=
+    _n=0
+    while [ -n "$_s" ] && [ "$_n" -lt 4096 ]; do
+        _run=${_s%%["$CTRL"'"'\\]*}
+        if [ -n "$_run" ]; then
+            _o=$_o$_run
+            _s=${_s#"$_run"}
+            continue
+        fi
+        _n=$((_n + 1))
+        case $_s in
+            '"'*) _o=$_o'\"' ;;
+            '\'*) _o=$_o'\\' ;;
+            "$NL"*) _o=$_o'\n' ;;
+            "$TAB"*) _o=$_o'\t' ;;
+            "$CR"*) _o=$_o'\r' ;;
+            *)
+                _t=${_s#?}
+                _c=${_s%"$_t"}
+                _o=$_o$(printf '\\u%04x' "'$_c")
+                ;;
+        esac
+        _s=${_s#?}
+    done
+    REPLY='"'$_o'"'
+}
+
+title=
+body=
+subtitle=
+app=
+bundle=
+symbol=
+url=
+openapp=
+tab=
+priority=
+ttl=
+dedupe=
+thread=
+sensitive=0
+strict=0
+sock=${ATOLL_NOTIFY_SOCKET:-${HOME:-}/.atoll/run/notify.sock}
+
+# Options that take a value accept it as the next argument (whatever it looks like, even "-x") or as --opt=value.
+while [ $# -gt 0 ]; do
+    case $1 in
+        -t|--title|-b|--body|-s|--subtitle|-a|--app|-i|--bundle-id|--symbol|-u|--url|-o|--open-app|--tab|-p|--priority|--ttl|--dedupe|--thread|--socket)
+            opt=$1
+            if [ $# -lt 2 ]; then die_usage "option $opt needs a value"; fi
+            val=$2
+            shift 2
+            ;;
+        --title=*|--body=*|--subtitle=*|--app=*|--bundle-id=*|--symbol=*|--url=*|--open-app=*|--tab=*|--priority=*|--ttl=*|--dedupe=*|--thread=*|--socket=*)
+            opt=${1%%=*}
+            val=${1#*=}
+            shift
+            ;;
+        --sensitive) sensitive=1; shift; continue ;;
+        --strict) strict=1; shift; continue ;;
+        -h|--help) usage; exit 0 ;;
+        --version) printf '%s 1\n' "$PROG"; exit 0 ;;
+        --) shift; if [ $# -gt 0 ]; then die_usage "unexpected argument after --"; fi; break ;;
+        -*) die_usage "unknown option" ;;
+        *) die_usage "unexpected argument (use -t for the title)" ;;
+    esac
+    case $opt in
+        -t|--title) title=$val ;;
+        -b|--body) body=$val ;;
+        -s|--subtitle) subtitle=$val ;;
+        -a|--app) app=$val ;;
+        -i|--bundle-id) bundle=$val ;;
+        --symbol) symbol=$val ;;
+        -u|--url) url=$val ;;
+        -o|--open-app) openapp=$val ;;
+        --tab) tab=$val ;;
+        -p|--priority) priority=$val ;;
+        --ttl) ttl=$val ;;
+        --dedupe) dedupe=$val ;;
+        --thread) thread=$val ;;
+        --socket) sock=$val ;;
+    esac
+done
+
+if [ -z "$title" ]; then die_usage "a title is required (-t TITLE)"; fi
+
+if [ -n "$priority" ]; then
+    case $priority in
+        low|normal|high|critical) ;;
+        *) die_usage "priority must be low, normal, high or critical" ;;
+    esac
+fi
+
+if [ -n "$ttl" ]; then
+    case $ttl in
+        ''|*[!0-9.]*|.*|*.|*.*.*) die_usage "--ttl must be a number of seconds, like 5 or 2.5" ;;
+    esac
+    while :; do
+        case $ttl in
+            0[0-9]*) ttl=${ttl#0} ;;       # JSON numbers have no leading zeros
+            *) break ;;
+        esac
+    done
+fi
+
+if [ "$body" = "-" ]; then body=$(head -c "$MAXLEN" 2>/dev/null); fi
+
+json='{"v":1'
+json_str "$title"; json=$json',"title":'$REPLY
+if [ -n "$body" ]; then json_str "$body"; json=$json',"body":'$REPLY; fi
+if [ -n "$subtitle" ]; then json_str "$subtitle"; json=$json',"subtitle":'$REPLY; fi
+if [ -n "$app" ]; then json_str "$app"; json=$json',"app":'$REPLY; fi
+if [ -n "$bundle" ]; then json_str "$bundle"; json=$json',"bundleID":'$REPLY; fi
+if [ -n "$symbol" ]; then json_str "$symbol"; json=$json',"symbol":'$REPLY; fi
+if [ -n "$url" ]; then json_str "$url"; json=$json',"url":'$REPLY; fi
+if [ -n "$openapp" ]; then json_str "$openapp"; json=$json',"openApp":'$REPLY; fi
+if [ -n "$tab" ]; then json_str "$tab"; json=$json',"tab":'$REPLY; fi
+if [ -n "$priority" ]; then json=$json',"priority":"'$priority'"'; fi
+if [ -n "$ttl" ]; then json=$json',"ttl":'$ttl; fi
+if [ -n "$dedupe" ]; then json_str "$dedupe"; json=$json',"dedupe":'$REPLY; fi
+if [ -n "$thread" ]; then json_str "$thread"; json=$json',"thread":'$REPLY; fi
+if [ "$sensitive" = 1 ]; then json=$json',"sensitive":true'; fi
+json=$json'}'
+
+not_running() {
+    printf '%s: Atoll is not running or its notification listener is off (nothing was sent).\n' "$PROG" >&2
+    if [ "$strict" = 1 ]; then exit 3; fi
+    exit 0
+}
+
+if [ ! -S "$sock" ]; then not_running; fi
+
+resp=$(printf '%s' "$json" | /usr/bin/nc -w 5 -U "$sock" 2>/dev/null)
+
+case $resp in
+    '')
+        not_running
+        ;;
+    *'"ok":true'*)
+        exit 0
+        ;;
+    *'"ok":false'*)
+        err=${resp#*'"error":"'}
+        err=${err%%'"'*}
+        # The text comes from a socket: show only plain characters (no terminal escape sequences).
+        err=$(printf '%s' "$err" | tr -cd "A-Za-z0-9 .,:;()'_-" | head -c 200)
+        printf '%s: rejected by Atoll: %s\n' "$PROG" "$err" >&2
+        exit 1
+        ;;
+    *)
+        printf '%s: unexpected reply from the notification socket.\n' "$PROG" >&2
+        exit 1
+        ;;
+esac

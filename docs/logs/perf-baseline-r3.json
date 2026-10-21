@@ -1,0 +1,22 @@
+{
+ "label": "baseline-r3",
+ "app": "<repo>/dist/AtollBase.app",
+ "seconds": 120,
+ "samples": 60,
+ "cpu_mean": 6.4,
+ "cpu_p95": 23.1,
+ "cpu_max": 32.5,
+ "wakeups_per_s": 0.3,
+ "rss_mb_start": 100.0,
+ "rss_mb_end": 117.0,
+ "rss_mb_growth": 17.0,
+ "threads_max": 13,
+ "child_processes": 3,
+ "child_cpu_sum": 0.0,
+ "children": [
+  "log",
+  "log",
+  "log"
+ ],
+ "footprint": "117 MB"
+}

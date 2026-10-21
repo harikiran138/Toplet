@@ -1,0 +1,21 @@
+{
+ "label": "new-r1",
+ "app": "<repo>/dist/AtollNew.app",
+ "seconds": 120,
+ "samples": 60,
+ "cpu_mean": 3.06,
+ "cpu_p95": 21.2,
+ "cpu_max": 28.9,
+ "wakeups_per_s": 0.1,
+ "rss_mb_start": 96.0,
+ "rss_mb_end": 105.0,
+ "rss_mb_growth": 9.0,
+ "threads_max": 10,
+ "child_processes": 2,
+ "child_cpu_sum": 0.0,
+ "children": [
+  "log",
+  "log"
+ ],
+ "footprint": "105 MB"
+}
