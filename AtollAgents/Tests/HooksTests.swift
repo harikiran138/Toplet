@@ -35,8 +35,10 @@ let fm = FileManager.default
 let root: String = {
     let base = NSTemporaryDirectory()
     var tmpl = Array((base + "ah-XXXXXX").utf8CString)
-    let p = mkdtemp(&tmpl)!
-    return String(cString: p)
+    // mkdtemp fills in the template in place. Read the name back from the array, not from the returned
+    // pointer: that points into a temporary buffer valid only during the call (it came back empty on CI).
+    guard mkdtemp(&tmpl) != nil else { fatalError("mkdtemp failed: \(String(cString: strerror(errno)))") }
+    return String(cString: tmpl)
 }()
 
 var caseCounter = 0
