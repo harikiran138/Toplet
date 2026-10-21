@@ -108,7 +108,14 @@ func runPassiveTests() async {
         for _ in 0..<30 { if src.openVnodePaths(appender.processIdentifier).contains(appReal) { heldCount += 1 }; usleep(7_000) }
         check(heldCount < 15, "SIMULATED Claude: an append-and-close writer does not hold its transcript open (\(heldCount)/30 samples)")
         await reap(appender)
-        check(src.openVnodePaths(me).count > 0, "the listing is not empty for a normal process")
+        // Hold a file open ourselves: whether stdout is a tty (a vnode) or a pipe depends on how the
+        // tests are run (terminal vs CI), so only a file this test opened is guaranteed to be listed.
+        let own = dir + "/own-open-file.txt"
+        FileManager.default.createFile(atPath: own, contents: Data("x".utf8))
+        if let handle = FileHandle(forReadingAtPath: own) {
+            check(src.openVnodePaths(me).contains(realPath(own)), "the listing includes a file this process holds open")
+            try? handle.close()
+        } else { check(false, "could not open a file to list") }
     } catch { check(false, "fd listing section: \(error)") }
 
     section("Exact Codex mapping through open files (fake fds)")
